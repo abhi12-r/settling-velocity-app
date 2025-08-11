@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Settling Velocity Calculator</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
+        .form-container { display: none; margin-top: 20px; }
+        label { display:block; margin:8px 0; }
+        input { padding:6px; width:220px; }
+        button { padding:8px 14px; margin-top:10px; cursor:pointer; }
+        table { margin:20px auto; border-collapse: collapse; width:90%; }
+        table, th, td { border:1px solid #333; }
+        th, td { padding:6px; text-align:center; }
+    </style>
+    <script>
+        function showForm() {
+            document.getElementById('form-container').style.display = 'block';
+            document.getElementById('start-link').style.display = 'none';
+        }
+
+        async function calculateVelocity(e) {
+            e.preventDefault();
+            const data = {
+                g: document.querySelector("[name='g']").value,
+                d_p: document.querySelector("[name='d_p']").value,
+                SG: document.querySelector("[name='SG']").value,
+                rho_w: document.querySelector("[name='rho_w']").value,
+                mu: document.querySelector("[name='mu']").value,
+                v_t: document.querySelector("[name='v_t']").value
+            };
+
+            const res = await fetch('/calculate', {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+
+            let html = `<h3>=== Results ===</h3>
+                        <p><b>Final Settling velocity:</b> ${result.velocity} m/s</p>
+                        <p><b>Final Reynolds number:</b> ${result.Re}</p>
+                        <p><b>Number of iterations:</b> ${result.iterations}</p>
+                        <button onclick="window.location.href='/download'">📥 Download Excel</button>`;
+
+            html += `<table>
+                    <tr><th>Iteration</th><th>Assumed Vt</th><th>Re</th><th>Cd</th><th>New Vt</th></tr>`;
+            result.table.forEach(r => {
+                html += `<tr>
+                    <td>${r.Iteration}</td>
+                    <td>${r['Assumed Vt']}</td>
+                    <td>${r.Re}</td>
+                    <td>${r.Cd}</td>
+                    <td>${r['New Vt']}</td>
+                </tr>`;
+            });
+            html += `</table>`;
+            document.getElementById('results').innerHTML = html;
+        }
+    </script>
+</head>
+<body>
+    <h1 id="start-link" onclick="showForm()" style="cursor:pointer; color:blue; text-decoration:underline;">
+        Find settling velocity of particle
+    </h1>
+
+    <div id="form-container" class="form-container">
+        <form onsubmit="calculateVelocity(event)">
+            <label>Acceleration due to gravity (m/s²): <input name="g" required value="9.8"></label>
+            <label>Particle diameter (m): <input name="d_p" required value="0.0006"></label>
+            <label>Specific gravity of particle: <input name="SG" required value="2.65"></label>
+            <label>Density of water (kg/m³): <input name="rho_w" required value="998.8"></label>
+            <label>Coefficient of viscosity (kg/(m·s)): <input name="mu" required value="0.001002"></label>
+            <label>First assumed terminal velocity (m/s): <input name="v_t" required value="1"></label>
+            <button type="submit">Solve</button>
+        </form>
+    </div>
+
+    <div id="results"></div>
+</body>
+</html>
+
